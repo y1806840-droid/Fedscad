@@ -1,0 +1,15 @@
+FedSCAD
+
+The federated training framework is adapted from the FedDF codebase:
+
+Tao Lin, Lingjing Kong, Sebastian U. Stich, and Martin Jaggi.
+Ensemble Distillation for Robust Model Fusion in Federated Learning.
+Advances in Neural Information Processing Systems, 2020.
+
+The upstream Apache License 2.0 is included in LICENSES/FedDF.txt.
+Existing source copyright and attribution notices are retained.
+
+Changes include fixed shared-anchor supervision, class-score knowledge
+distillation, accumulated history correction, supported models and data
+configurations, and release documentation. Unrelated baseline and
+security-experiment entry points were removed.
