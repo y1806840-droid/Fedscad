@@ -227,10 +227,10 @@ class MasterFedAvg(MasterBase):
     def _extract_probe_features(self, model, inputs):
         return self._select_probe_features(self._extract_probe_outputs(model, inputs))
 
-    def _get_probe_etf_anchors(self, model, projection_dim, num_classes, device):
+    def _get_probe_shared_anchors(self, model, projection_dim, num_classes, device):
         """Recreate the same fixed reference used by the client."""
-        from pcode.proco import _etf_matrix, _paired_class_matrix, _random_unit_matrix
-        mode = str(getattr(self.conf, 'fedga_global_init', 'etf')).lower()
+        from pcode.shared_anchors import _etf_matrix, _paired_class_matrix, _random_unit_matrix
+        mode = str(getattr(self.conf, 'anchor_init', 'etf')).lower()
         if mode == 'random':
             anchors = _random_unit_matrix(
                 num_classes, projection_dim, torch.float32, device,
@@ -242,7 +242,7 @@ class MasterFedAvg(MasterBase):
             anchors = _etf_matrix(num_classes, projection_dim, torch.float32, device)
         else:
             raise ValueError('Unsupported shared-anchor initialization')
-        temperature = float(getattr(self.conf, 'proco_temp', 0.2))
+        temperature = float(getattr(self.conf, 'anchor_temperature', 0.2))
         return F.normalize(anchors, dim=1), 1.0 / temperature, 'fedscad'
 
     @staticmethod
@@ -317,7 +317,7 @@ class MasterFedAvg(MasterBase):
                         projection = outputs['projection']
                         logits = outputs['logits']
                         if projection is not None and logits is not None:
-                            client_anchors, client_anchor_scale, client_anchor_type = self._get_probe_etf_anchors(model, projection.size(1), logits.size(1), device)
+                            client_anchors, client_anchor_scale, client_anchor_type = self._get_probe_shared_anchors(model, projection.size(1), logits.size(1), device)
                     for class_pos, class_id in enumerate(class_ids):
                         mask = targets == class_id
                         if mask.any():

@@ -91,9 +91,27 @@ def main():
             assert conf.feat_dim >= {"cifar10": 9, "cifar100": 99, "tiny_imagenet": 199}[conf.data]
             if "--partition" in case:
                 assert conf.partition_data == "pathological"
+        # Old shell commands must resolve to the same canonical configuration.
+        aliases = {
+            'proco_temp': ('anchor_temperature', '0.2'),
+            'proco_alpha': ('agce_weight', '0.3'),
+            'fedga_global_init': ('anchor_init', 'random'),
+            'use_feddyn': ('use_hc', 'True'),
+            'feddyn_alpha': ('hc_weight', '0.25'),
+            'scl_warmup_rounds': ('agce_warmup_rounds', '0'),
+            'global_fc_kd_weight': ('kd_weight', '1.0'),
+            'self_distillation_temperature': ('kd_temperature', '3'),
+        }
+        for legacy, (canonical, value) in aliases.items():
+            sys.argv = ['run_gloo.py', '--' + legacy, value]
+            old_conf = vars(parser_globals['get_args']())
+            sys.argv = ['run_gloo.py', '--' + canonical, value]
+            new_conf = vars(parser_globals['get_args']())
+            assert old_conf == new_conf, f'Alias mismatch: {legacy}'
+            assert legacy not in old_conf, f'Leaked legacy field: {legacy}'
     finally:
         sys.argv = old_argv
-    print(f"PASS: {len(paths)} Python files, local import closure, secret patterns and {len(cases)} launch presets.")
+    print(f"PASS: {len(paths)} Python files, local import closure, secret patterns, {len(cases)} launch presets and {len(aliases)} CLI aliases.")
 
 
 if __name__ == "__main__":

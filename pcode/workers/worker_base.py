@@ -163,7 +163,7 @@ class WorkerBase(object):
 
     def _local_training_with_self_distillation(self, loss, output, data_batch):
         if self.conf.self_distillation > 0:
-            loss = loss * (1 - self.conf.self_distillation) + self.conf.self_distillation * self._divergence(student_logits=output / self.conf.self_distillation_temperature, teacher_logits=self.init_model(data_batch['input']) / self.conf.self_distillation_temperature)
+            loss = loss * (1 - self.conf.self_distillation) + self.conf.self_distillation * self._divergence(student_logits=output / self.conf.kd_temperature, teacher_logits=self.init_model(data_batch['input']) / self.conf.kd_temperature)
         return loss
 
     def _divergence(self, student_logits, teacher_logits, KL_temperature=1.0):

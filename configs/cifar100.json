@@ -3,7 +3,7 @@
   "local_n_epochs": 3,
   "feat_dim": 128,
   "weight_decay": 0.0005,
-  "feddyn_alpha": 0.25,
-  "global_fc_kd_weight": 1.0,
+  "hc_weight": 0.25,
+  "kd_weight": 1.0,
   "shard_per_user": 10
 }

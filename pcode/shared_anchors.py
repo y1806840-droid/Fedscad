@@ -57,22 +57,22 @@ class _AnchorState:
         self.Ave = anchors
         self.Amount = torch.zeros(anchors.size(0), dtype=anchors.dtype)
 
-class ProCoLoss(nn.Module):
-    """Fixed shared class scores; legacy name retained for experiment compatibility."""
+class SharedAnchorScores(nn.Module):
+    """Temperature-scaled cosine scores against fixed shared class anchors."""
 
-    def __init__(self, contrast_dim, temperature=0.2, num_classes=10, dtype_str='float32', global_init='etf', anchor_seed=0, **kwargs):
+    def __init__(self, feature_dim, temperature=0.2, num_classes=10, dtype_str='float32', anchor_init='etf', anchor_seed=0, **kwargs):
         super().__init__()
         self.temperature = float(temperature)
         if self.temperature <= 0:
             raise ValueError('The anchor temperature must be positive.')
         dtype = getattr(torch, dtype_str)
-        mode = str(global_init).lower()
+        mode = str(anchor_init).lower()
         if mode == 'etf':
-            a = _etf_matrix(num_classes, contrast_dim, dtype, torch.device('cpu'))
+            a = _etf_matrix(num_classes, feature_dim, dtype, torch.device('cpu'))
         elif mode in ('random', 'rand'):
-            a = _random_unit_matrix(num_classes, contrast_dim, dtype, torch.device('cpu'), anchor_seed)
+            a = _random_unit_matrix(num_classes, feature_dim, dtype, torch.device('cpu'), anchor_seed)
         elif mode in ('paired', 'paired_class'):
-            a = _paired_class_matrix(num_classes, contrast_dim, dtype, torch.device('cpu'))
+            a = _paired_class_matrix(num_classes, feature_dim, dtype, torch.device('cpu'))
         else:
             raise ValueError('Supported anchor initializations: etf, random, paired_class.')
         self.estimator = _AnchorState(a.clone())

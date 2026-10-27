@@ -103,14 +103,15 @@ pip install -r requirements-analysis.txt.
 ## Code map
 
 - run_gloo.py: distributed process entry point.
-- pcode/workers/worker_fedga.py: local CE, AGCE, detached-teacher KD and HC.
-- pcode/masters/master_fedga.py: model exchange and accumulated history correction.
-- pcode/proco.py: fixed ETF, random and paired anchors, and normalized scores.
+- pcode/workers/worker_fedscad.py: local CE, AGCE, detached-teacher KD and HC.
+- pcode/masters/master_fedscad.py: model exchange and accumulated history correction.
+- pcode/shared_anchors.py: fixed ETF, random and paired anchors, and normalized scores.
 - pcode/models/: the two backbone/projection-head architectures.
 - pcode/datasets/: loading and the original partition generator.
 - pcode/utils/: checkpointing, metrics, timing and communication tracking.
 
-Legacy fedga module and option names are retained internally for compatibility.
+Source files, classes, configuration keys and logs use FedSCAD naming.
+Older command-line options remain accepted as aliases for compatibility.
 The released method is FedSCAD. Other baselines and the later security/client
 selection experiments are not included.
 

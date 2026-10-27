@@ -37,9 +37,9 @@ def build_command(argv=None):
     with (ROOT / "configs" / f"{args.dataset}.json").open(encoding="utf-8") as stream:
         settings = json.load(stream)
     if args.hc_weight is not None:
-        settings["feddyn_alpha"] = args.hc_weight
+        settings["hc_weight"] = args.hc_weight
     if args.kd_weight is not None:
-        settings["global_fc_kd_weight"] = args.kd_weight
+        settings["kd_weight"] = args.kd_weight
     if args.shards_per_client is not None:
         settings["shard_per_user"] = args.shards_per_client
     arch = settings["arch"]
@@ -57,12 +57,12 @@ def build_command(argv=None):
         "optimizer": "sgd", "lr": 0.01, "momentum_factor": 0.9, "use_nesterov": True,
         "lr_warmup": True, "lr_warmup_epochs": 15, "lr_warmup_epochs_upper_bound": 300,
         "lr_scheduler": "MultiStepLR", "lr_decay": 0.1, "lr_milestones": "100,150",
-        "use_feddyn": settings["feddyn_alpha"] > 0,
+        "use_hc": settings["hc_weight"] > 0,
         "use_logit_adjust": True, "ce_weight": 1.0,
-        "proco_temp": 0.2, "proco_alpha": args.agce_weight,
-        "self_distillation_temperature": 3, "self_distillation": 0,
-        "kd_warmup_rounds": 0, "scl_warmup_rounds": 0,
-        "fedga_global_init": args.anchor_init, "cnn_mlp_cifar_simple": True,
+        "anchor_temperature": 0.2, "agce_weight": args.agce_weight,
+        "kd_temperature": 3, "self_distillation": 0,
+        "kd_warmup_rounds": 0, "agce_warmup_rounds": 0,
+        "anchor_init": args.anchor_init, "cnn_mlp_cifar_simple": True,
         "track_time": True, "display_tracked_time": True,
         "track_communication": True, "display_communication": True,
         "same_seed_process": True, "pn_normalize": True, "personal_test": False,

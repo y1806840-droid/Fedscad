@@ -12,8 +12,8 @@ from torch.nn import functional as F
 
 from pcode.models.cnn_mlp import cnn_mlp
 from pcode.models.resnet18_mlp import resnet18_mlp
-from pcode.proco import ProCoLoss
-from pcode.workers.worker_fedga import WorkerFedGA
+from pcode.shared_anchors import SharedAnchorScores
+from pcode.workers.worker_fedscad import WorkerFedSCAD
 
 
 class Components(unittest.TestCase):
@@ -35,22 +35,22 @@ class Components(unittest.TestCase):
             self.assertEqual(backbone.shape, (2, 512))
 
     def test_anchor_geometry(self):
-        etf = ProCoLoss(128).estimator_old.Ave
+        etf = SharedAnchorScores(128).estimator_old.Ave
         gram = etf @ etf.T
         expected = torch.full((10, 10), -1 / 9)
         expected.fill_diagonal_(1)
         torch.testing.assert_close(gram, expected, atol=1e-5, rtol=1e-5)
-        a = ProCoLoss(128, global_init="random", anchor_seed=100)
-        b = ProCoLoss(128, global_init="random", anchor_seed=100)
+        a = SharedAnchorScores(128, anchor_init="random", anchor_seed=100)
+        b = SharedAnchorScores(128, anchor_init="random", anchor_seed=100)
         torch.testing.assert_close(a.estimator_old.Ave, b.estimator_old.Ave)
-        paired = ProCoLoss(128, global_init="paired_class")
+        paired = SharedAnchorScores(128, anchor_init="paired_class")
         scores = paired(torch.randn(3, 128))
         torch.testing.assert_close(scores[:, 0], scores[:, 1])
 
     def test_detached_kd_target(self):
         features = torch.randn(4, 128, requires_grad=True)
         logits = torch.randn(4, 10, requires_grad=True)
-        teacher_scores = ProCoLoss(128)(features)
+        teacher_scores = SharedAnchorScores(128)(features)
         loss = F.kl_div(F.log_softmax(logits / 3, dim=-1),
                         F.log_softmax(teacher_scores.detach() / 3, dim=-1),
                         log_target=True, reduction="batchmean") * 9
@@ -61,22 +61,22 @@ class Components(unittest.TestCase):
     def test_agce_reaches_backbone(self):
         model = cnn_mlp(SimpleNamespace(data="cifar10", feat_dim=128)).train()
         features, _, _ = model(torch.randn(4, 3, 32, 32))
-        F.cross_entropy(ProCoLoss(128)(features), torch.arange(4)).backward()
+        F.cross_entropy(SharedAnchorScores(128)(features), torch.arange(4)).backward()
         self.assertGreater(model.conv1.weight.grad.norm().item(), 0)
 
     def test_local_objective(self):
-        worker = WorkerFedGA.__new__(WorkerFedGA)
+        worker = WorkerFedSCAD.__new__(WorkerFedSCAD)
         worker.conf = SimpleNamespace(
-            graph=SimpleNamespace(comm_round=2), ce_weight=1.0, proco_alpha=0.3,
-            global_fc_kd_weight=0.4, self_distillation_temperature=3,
-            use_feddyn=True, feddyn_alpha=0.15, kd_warmup_rounds=0,
-            scl_warmup_rounds=0,
+            graph=SimpleNamespace(comm_round=2), ce_weight=1.0, agce_weight=0.3,
+            kd_weight=0.4, kd_temperature=3,
+            use_hc=True, hc_weight=0.15, kd_warmup_rounds=0,
+            agce_warmup_rounds=0,
         )
         worker.model = cnn_mlp(SimpleNamespace(data="cifar10", feat_dim=128)).eval()
-        worker.proco_loss = ProCoLoss(128)
+        worker.anchor_scores = SharedAnchorScores(128)
         worker.criterion = nn.CrossEntropyLoss()
-        worker.scl_criterion = nn.CrossEntropyLoss()
-        worker._fedga_enable_aux = True
+        worker.agce_criterion = nn.CrossEntropyLoss()
+        worker._enable_aux = True
         worker.tracker = None
         worker.metrics = SimpleNamespace(evaluate=lambda *args: [])
         params = list(worker.model.parameters())
@@ -84,7 +84,7 @@ class Components(unittest.TestCase):
         worker.regular_params_list = [p.detach().clone() for p in params]
         x, y = torch.randn(4, 3, 32, 32), torch.arange(4)
         features, logits, _ = worker.model(x)
-        scores = worker.proco_loss(features)
+        scores = worker.anchor_scores(features)
         kd = F.kl_div(F.log_softmax(logits / 3, dim=-1),
                       F.log_softmax(scores.detach() / 3, dim=-1),
                       log_target=True, reduction="batchmean") * 9
